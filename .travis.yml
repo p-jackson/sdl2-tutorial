@@ -1,3 +1,6 @@
+dist: trusty
+sudo: required
+
 language: rust
 rust:
   - stable
@@ -7,3 +10,7 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libsdl2-dev
