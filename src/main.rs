@@ -9,6 +9,8 @@ use std::io::{self, Write};
 use sdl2::render::{Renderer, Texture};
 use sdl2::rect::Rect;
 use sdl2::image;
+use sdl2::ttf::{self, Font};
+use sdl2::pixels::Color;
 
 
 mod errors {
@@ -33,6 +35,7 @@ trait RendererHelpers {
                                 w: u32,
                                 h: u32)
                                 -> Result<()>;
+    fn render_text(&mut self, text: &str, font: &Font, color: Color) -> Result<Texture>;
 }
 
 
@@ -56,6 +59,15 @@ impl<'a> RendererHelpers for Renderer<'a> {
                                 h: u32)
                                 -> Result<()> {
         self.copy(&texture, None, Some(Rect::new(x, y, w, h)))
+            .map_err(From::from)
+    }
+
+    fn render_text(&mut self, text: &str, font: &Font, color: Color) -> Result<Texture> {
+        let surface = font.render(text)
+            .blended(color)
+            .chain_err(|| format!("Failed to render text to surface: {}", text))?;
+        self.create_texture_from_surface(surface)
+            .chain_err(|| format!("Failed to create texture from text: {}", text))
             .map_err(From::from)
     }
 }
@@ -85,6 +97,7 @@ fn main() {
 fn run() -> Result<()> {
     let sdl_context = sdl2::init()?;
     let _image_context = image::init(image::INIT_PNG)?;
+    let ttf_context = ttf::init().chain_err(|| "Failed to init ttf context")?;
 
     let video_subsystem = sdl_context.video()?;
 
@@ -106,7 +119,10 @@ fn run() -> Result<()> {
     println!("output size {:?}", renderer.output_size()?);
 
     let background = renderer.load_texture_resource("lesson3", "background.png")?;
-    let image = renderer.load_texture_resource("lesson3", "image.png")?;
+    let font_path = get_resource_path("lesson6", "sample.ttf")?;
+    let font = ttf_context.load_font(&font_path, 64)?;
+    let color = Color::RGBA(255, 255, 255, 255);
+    let image = renderer.render_text("TTF fonts are cool!", &font, color)?;
 
     let mut event_pump = sdl_context.event_pump()?;
     let mut quit = false;

@@ -44,6 +44,12 @@ install:
   - set LIB=%LIB%;C:\projects\sdl2-tutorial\sdl2_image\SDL2_image-2.0.1\lib\x64
   - ps: Get-ChildItem -Recurse -Depth 4
 
+  # Install SDL2_TTF.
+  - ps: Start-FileDownload https://www.libsdl.org/projects/SDL_ttf/release/SDL2_ttf-devel-2.0.1-VC.zip -FileName sdl2_ttf.zip
+  - ps: Expand-Archive sdl2_ttf.zip -DestinationPath sdl2_ttf
+  - set LIB=%LIB%;C:\projects\sdl2-tutorial\sdl2_ttf\SDL2_ttf-2.0.1\lib\x64
+  - ps: Get-ChildItem -Recurse -Depth 4
+
 build: false
 
 test_script:
