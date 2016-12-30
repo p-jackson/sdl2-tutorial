@@ -3,13 +3,12 @@
 extern crate error_chain;
 extern crate sdl2;
 
-use std::{env, process, thread};
-use std::time::Duration;
+use std::{env, process};
 use std::path::PathBuf;
 use std::io::{self, Write};
-use sdl2::surface::Surface;
 use sdl2::render::{Renderer, Texture};
 use sdl2::rect::Rect;
+use sdl2::image;
 
 
 mod errors {
@@ -18,27 +17,45 @@ mod errors {
 
 use errors::*;
 
+
 const SCREEN_WIDTH: u32 = 640;
 const SCREEN_HEIGHT: u32 = 480;
+const TILE_SIZE: u32 = 40;
+
 
 trait RendererHelpers {
-    fn load_texture(&self, lesson: &str, file: &str) -> Result<Texture>;
+    fn load_texture_resource(&self, lesson: &str, file: &str) -> Result<Texture>;
     fn render_texture(&mut self, texture: &Texture, x: i32, y: i32) -> Result<()>;
+    fn render_texture_with_size(&mut self,
+                                texture: &Texture,
+                                x: i32,
+                                y: i32,
+                                w: u32,
+                                h: u32)
+                                -> Result<()>;
 }
 
+
 impl<'a> RendererHelpers for Renderer<'a> {
-    fn load_texture(&self, lesson: &str, file: &str) -> Result<Texture> {
+    fn load_texture_resource(&self, lesson: &str, file: &str) -> Result<Texture> {
+        use sdl2::image::LoadTexture;
         let path = get_resource_path(lesson, file)?;
-        let surface = Surface::load_bmp(&path)?;
-        self.create_texture_from_surface(surface)
-            .chain_err(|| format!("Failed to create texture from surface made with {:?}", path))
+        self.load_texture(&path).map_err(From::from)
     }
 
     fn render_texture(&mut self, texture: &Texture, x: i32, y: i32) -> Result<()> {
         let info = texture.query();
-        self.copy(&texture,
-                  None,
-                  Some(Rect::new(x, y, info.width, info.height)))
+        self.render_texture_with_size(texture, x, y, info.width, info.height)
+    }
+
+    fn render_texture_with_size(&mut self,
+                                texture: &Texture,
+                                x: i32,
+                                y: i32,
+                                w: u32,
+                                h: u32)
+                                -> Result<()> {
+        self.copy(&texture, None, Some(Rect::new(x, y, w, h)))
             .map_err(From::from)
     }
 }
@@ -64,8 +81,10 @@ fn main() {
     }
 }
 
+
 fn run() -> Result<()> {
     let sdl_context = sdl2::init()?;
+    let _image_context = image::init(image::INIT_PNG)?;
 
     let video_subsystem = sdl_context.video()?;
 
@@ -86,27 +105,49 @@ fn run() -> Result<()> {
 
     println!("output size {:?}", renderer.output_size()?);
 
-    let background = renderer.load_texture("lesson2", "background.bmp")?;
-    let image = renderer.load_texture("lesson2", "image.bmp")?;
+    let background = renderer.load_texture_resource("lesson3", "background.png")?;
+    let image = renderer.load_texture_resource("lesson3", "image.png")?;
 
-    renderer.clear();
+    let mut event_pump = sdl_context.event_pump()?;
+    let mut quit = false;
 
-    let bg_info = background.query();
-    renderer.render_texture(&background, 0, 0)?;
-    renderer.render_texture(&background, bg_info.width as i32, 0)?;
-    renderer.render_texture(&background, 0, bg_info.height as i32)?;
-    renderer.render_texture(&background, bg_info.width as i32, bg_info.height as i32)?;
+    while !quit {
+        while let Some(event) = event_pump.poll_event() {
+            use sdl2::event::Event;
+            match event {
+                Event::Quit { .. } => quit = true,
+                Event::KeyDown { .. } => quit = true,
+                Event::MouseButtonDown { .. } => quit = true,
+                _ => (),
+            }
+        }
 
-    let image_info = image.query();
-    let image_x = (SCREEN_WIDTH - image_info.width) / 2;
-    let image_y = (SCREEN_HEIGHT - image_info.height) / 2;
-    renderer.render_texture(&image, image_x as i32, image_y as i32)?;
+        renderer.clear();
 
-    renderer.present();
-    thread::sleep(Duration::from_secs(3));
+        let x_tiles = SCREEN_WIDTH / TILE_SIZE;
+        let y_tiles = SCREEN_HEIGHT / TILE_SIZE;
+
+        for i in 0..(x_tiles * y_tiles) {
+            let x = i % x_tiles;
+            let y = i / x_tiles;
+            renderer.render_texture_with_size(&background,
+                                          (x * TILE_SIZE) as i32,
+                                          (y * TILE_SIZE) as i32,
+                                          TILE_SIZE,
+                                          TILE_SIZE)?;
+        }
+
+        let image_info = image.query();
+        let image_x = (SCREEN_WIDTH - image_info.width) / 2;
+        let image_y = (SCREEN_HEIGHT - image_info.height) / 2;
+        renderer.render_texture(&image, image_x as i32, image_y as i32)?;
+
+        renderer.present();
+    }
 
     Ok(())
 }
+
 
 fn get_resource_path(lesson: &str, file: &str) -> Result<PathBuf> {
     let cwd = env::current_dir().chain_err(|| "Couldn't get current directory")?;

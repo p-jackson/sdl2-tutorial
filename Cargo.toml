@@ -5,4 +5,4 @@ authors = ["pjackson"]
 
 [dependencies]
 error-chain = "0.7.2"
-sdl2 = "0.27.2"
+sdl2 = { version = "0.27.2", default-features = false, features = ["image"] }
