@@ -1,0 +1,1 @@
+mt.exe -outputresource:target\debug\sdl2-tutorial.exe.exe;#1 -manifest dpi-aware.manifest
