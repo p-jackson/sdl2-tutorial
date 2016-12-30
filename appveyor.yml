@@ -14,3 +14,9 @@ environment:
 matrix:
   allow_failures:
     - RUST_VERSION: nightly
+
+build: false
+
+test_script:
+  - cargo build --verbose
+  - cargo test --verbose
