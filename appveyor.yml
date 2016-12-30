@@ -1,19 +1,48 @@
-install:
-  - ps: Start-FileDownload "https://raw.githubusercontent.com/carllerche/travis-rust-matrix/master/install.ps1"; . .\install.ps1
-
 platform:
-  - x86
   - x64
 
 environment:
+  global:
+    PROJECT_NAME: sdl2-tutorial
   matrix:
-    - RUST_VERSION: 1.14.0
-    - RUST_VERSION: beta
-    - RUST_VERSION: nightly
+    - TARGET: x86_64-pc-windows-msvc
+      CHANNEL: stable
+    - TARGET: x86_64-pc-windows-msvc
+      CHANNEL: beta
+    - TARGET: x86_64-pc-windows-msvc
+      CHANNEL: nightly
 
 matrix:
   allow_failures:
-    - RUST_VERSION: nightly
+    - CHANNEL: nightly
+
+# Based on https://users.rust-lang.org/t/solved-installing-third-party-dependencies-into-rust-appveyor-build/8465/3
+install:
+  # Print Powershell version.
+  - ps: $PSVersionTable.PSVersion
+  - ps: pwd
+
+  # Install Rust and Cargo
+  - curl -sSf -o rustup-init.exe https://win.rustup.rs
+  - rustup-init.exe --default-host %TARGET% --default-toolchain %CHANNEL% -y
+  - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+  - rustc -Vv
+  - cargo -V
+
+  # Add GCC to PATH if needed.
+  - if "%TARGET%" == "i686-pc-windows-gnu" set PATH=%PATH%;C:\msys64\mingw32\bin
+  - if "%TARGET%" == "x86_64-pc-windows-gnu" set PATH=%PATH%;C:\msys64\mingw64\bin
+
+  # Install SDL2.
+  - ps: Start-FileDownload https://www.libsdl.org/release/SDL2-devel-2.0.5-VC.zip -FileName sdl2.zip
+  - ps: Expand-Archive sdl2.zip -DestinationPath sdl2
+  - set LIB=%LIB%;C:\projects\sdl2-tutorial\sdl2\SDL2-2.0.5\lib\x64
+
+  # Install SDL2_Image.
+  - ps: Start-FileDownload https://www.libsdl.org/projects/SDL_image/release/SDL2_image-devel-2.0.1-VC.zip -FileName sdl2_image.zip
+  - ps: Expand-Archive sdl2_image.zip -DestinationPath sdl2_image
+  - set LIB=%LIB%;C:\projects\sdl2-tutorial\sdl2_image\SDL2_image-2.0.1\lib\x64
+  - ps: Get-ChildItem -Recurse -Depth 4
 
 build: false
 
