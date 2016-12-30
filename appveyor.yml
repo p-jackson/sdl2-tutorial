@@ -49,3 +49,7 @@ build: false
 test_script:
   - cargo build --verbose
   - cargo test --verbose
+
+artifacts:
+  - path: target\debug\sdl2-tutorial.exe
+    name: sdl2-tutorial
